@@ -8,6 +8,7 @@ from accounts.models import User
 from accounts.serializers import UserSerializer2
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
+import random
 
 # Create your views here.
 
@@ -32,32 +33,39 @@ def recommended(request, id):
     user = get_object_or_404(User, id=id)
     genres = user.like_genres.all()
     reviews = Review.objects.filter(user=user)
-    # 평점 8 이상 영화의 해시태그들
+    # 1.평점 8 이상 영화의 해시태그들
     hashtagList = []
+    watchMovie = []
     for review in reviews:
         if review.star >= 8:
             movie = get_object_or_404(Movie, title=review.movie)
+            watchMovie.append(movie)
             for hashtag in movie.hashtags.all():
                 hashtagList.append(hashtag)
-    # 선호장르의 영화의 해시태그들
+    # 2.선호장르의 영화의 해시태그들
     movieList = []
     movieList2 = []
     for genre in genres:
         genre2 = get_object_or_404(Genre, name=genre)
         movies = Movie.objects.filter(genres=genre2).order_by('-score')
-        print(movies)
+        # print(movies)
+
         for movie in movies:
             for hashtag in movie.hashtags.all():
                 for h in hashtagList:
                     if hashtag == h:
-                        movieList.append(movie)
-                movieList2.append(movie)
+                        # 사용자가 이미 평점을 남긴 영화는 제외
+                        if movie not in watchMovie:
+                            movieList.append(movie)
+                # 사용자가 이미 평점을 남긴 영화는 제외
+                if movie not in watchMovie:
+                    movieList2.append(movie)
                 break
 
     if movieList:
-        movie = movieList[0]
+        movie = movieList[random.randrange(0, len(movieList)-1)]
     else:
-        movie = movieList2[0]
+        movie = movieList2[random.randrange(0, len(movieList2)-1)]
     serializer = MovieSerializer(movie)
     return JsonResponse(serializer.data, safe=False)
 
